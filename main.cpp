@@ -38,25 +38,48 @@
  * @htmlonly    http://www.gnu.org/copyleft/gpl.html
  */
 
-#include "mkl_TPMDelay.h"
-#include "mkl_PIT.h"
-#include "mkl_PITDelay.h"
-#include "mkl_PITPeriodicInterrupt.h"
-#include "mkl_GPIOPort.h"
-#include "dsf_SerialDisplays.h"
 
+#include "mkl_TPMDelay/mkl_TPMDelay.h"
+#include "mkl_PIT/mkl_PIT.h"
+#include "mkl_PITDelay/mkl_PITDelay.h"
+#include "mkl_PITPeriodicInterrupt/mkl_PITPeriodicInterrupt.h"
+#include "mkl_GPIOPort/mkl_GPIOPort.h"
+#include "SerialDisplays/dsf_SerialDisplays.h"
+#include "dsf_DivFreq.h"
 #include <stdint.h>
-
 #include "dsf_OnOff.h"
 #include "dsf_Temporizador.h"
 
 
 
+// SETUP dos pinos em uso no projeto
+
+mkl_GPIOPort blueLed(gpio_PTD1);
+mkl_GPIOPort greenLed(gpio_PTB19);
+
+mkl_GPIOPort onoffKey(gpio_PTB8);
+mkl_GPIOPort sleepKey(gpio_PTB9);
+mkl_GPIOPort decKey(gpio_PTB11);
+mkl_GPIOPort resetKey(gpio_PTB10);
+
+
+mkl_PITInterruptInterrupt pit(PIT_Ch0);
+mkl_TPMDelay tpm(tpm_TPM0);
+
+
+dsf_SerialDisplays disp(gpio_PTC7, gpio_PTC0, gpio_PTC3);
+
+dsf_DivFreq divisor;
+dsf_Temporizador temporizador;
+dsf_OnOff standby;
+
 
 /*!
  *  Configuração do PIT para gerar interrupções periódicas.
  */
-  int setupPIT() {
+
+  int setupPIT()
+  {
 	pit.enablePeripheralModule();
 	pit.setPeriod(0x4e20);
    	
@@ -70,18 +93,8 @@
  *  Atualiza as informações dos displays
  */
 
-
-// SETUP dos pinos em uso no projeto
-
-mkl_GPIOPort blueLed(gpio_PTD1);
-mkl_GPIOPort greenLed(gpio_PTB19);
-
-mkl_GPIOPort onoffKey(gpio_PTB8);
-mkl_GPIOPort sleepKey(gpio_PTB9);
-mkl_GPIOPort decKey(gpio_PTB10);
-mkl_GPIOPort resetKey(gpio_PTB11);
-
-void setupGPIO() {
+void setupGPIO()
+{
  
   //Configura o pino para o modo saída.
   
@@ -103,41 +116,28 @@ void setupGPIO() {
   resetKey.setPullResistor(gpio_pullUpResistor);
 }
 
-void setupTPM() {
+void setupTPM()
+{
   tpm.setFrequency(tpm_div128);
 }
 
-  //Inicializa a classe OnOff
-  dsf_OnOff standby;
-  
-/*! . */
-
-/*! Objeto da classe delay. */
-dsf_Delay_ocp tpm(TPM_t::dsf_TPM2);
-
-mkl_PITInterruptInterrupt pit(PIT_Ch0);
-
-// display
-dsf_SerialDisplays disp(gpio_PTC7, gpio_PTC0, gpio_PTC3);
-
-
-dsf_DivFreq divisor();
-
-dsf_Temporizador temporizador();
-
 void setup()
 {
-  tpm.setFrequency(TPMDiv_t::Div128);
+  tpm.setFrequency(tpm_div128);
 }
 
-extern "C" {
-  void PIT_IRQHandler(void) {
+extern "C"
+{
+  void PIT_IRQHandler(void)
+  {
     disp.updateDisplays();
-    if(divisor.contador()){
+    if(divisor.contador())
+    {
     	temporizador.decrementador();
     }
   }
 }
+
 
 int main() {
  
@@ -155,13 +155,15 @@ int main() {
 
 disp.clearDisplays();
 
-  while (true){
+  while (true)
+  {
     
     if (!onoffKey.readBit())
     {
 		//Debounce  - Aguarda 30 ms. 4915 ciclos
 		tpm.startDelay(0x1333);
-    	if(tpm.timeoutDelay){
+    	if(tpm.timeoutDelay() == 0)
+    	{
     		standby.onoff(onoffKey, greenLed);
     		tpm.cancelDelay();
     	}
@@ -171,26 +173,29 @@ disp.clearDisplays();
     {
     	//Debounce  - Aguarda 30 ms. 4915 ciclos
     	tpm.startDelay(0x1333);
-    	if(tpm.timeoutDelay){
+    	if(tpm.timeoutDelay() == 0)
+    	{
     		temporizador.resetar();
     		tpm.cancelDelay();
     	}
-    	
+
     }
     
     if (!sleepKey.readBit())
     {
     	//Debounce  - Aguarda 30 ms. 4915 ciclos
     	tpm.startDelay(0x1333);
-    	if(tpm.timeoutDelay){
+
+    	if(tpm.timeoutDelay() == 0)
+    	{
     		temporizador.incrementador();
     		tpm.cancelDelay();
     	}
-    	
+
     }
-   
+
     //escreve o valor do tempo no display
-    disp.writeWord(temporizador.consulta());     
+    disp.writeWord(temporizador.consulta());
   }
   return 0;
 }
