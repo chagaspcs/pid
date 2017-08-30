@@ -79,7 +79,7 @@ mkl_GPIOPort greenLed(gpio_PTB19);
 mkl_GPIOPort onoffKey(gpio_PTB8);
 mkl_GPIOPort sleepKey(gpio_PTB9);
 mkl_GPIOPort decKey(gpio_PTB10);
-mkl_GPIOPort rstKey(gpio_PTB11);
+mkl_GPIOPort resetKey(gpio_PTB11);
 
 void setupGPIO() {
  
@@ -99,8 +99,8 @@ void setupGPIO() {
   decKey.setPortMode(gpio_input);
   decKey.setPullResistor(gpio_pullUpResistor);
 
-  rstKey.setPortMode(gpio_input);
-  rstKey.setPullResistor(gpio_pullUpResistor);
+  resetKey.setPortMode(gpio_input);
+  resetKey.setPullResistor(gpio_pullUpResistor);
 }
 
 void setupTPM() {
@@ -157,31 +157,40 @@ disp.clearDisplays();
 
   while (true){
     
-    if (standy.onoff(onoffKey, greenLed))
+    if (!onoffKey.readBit())
     {
 		//Debounce  - Aguarda 30 ms. 4915 ciclos
-		tpm.waitDelay(0x1333);
-		    //Escreve no display.
-    //disp.writeWord(1234);
+		tpm.startDelay(0x1333);
+    	if(tpm.timeoutDelay){
+    		standby.onoff(onoffKey, greenLed);
+    		tpm.cancelDelay();
+    	}
     }
    
-    if (!resetKey.readbit())
+    if (!resetKey.readBit())
     {
-    	temporizador.resetar()
-		//Debounce  - Aguarda 30 ms. 4915 ciclos
-		tpm.waitDelay(0x1333);
-		    //Escreve no display.
-    //disp.writeWord(1234);
+    	//Debounce  - Aguarda 30 ms. 4915 ciclos
+    	tpm.startDelay(0x1333);
+    	if(tpm.timeoutDelay){
+    		temporizador.resetar();
+    		tpm.cancelDelay();
+    	}
+    	
     }
     
-    if (temporizador.incrementador())
+    if (!sleepKey.readBit())
     {
-		//Debounce  - Aguarda 30 ms. 4915 ciclos
-		tpm.waitDelay(0x1333);
-		    //Escreve no display.
-    //disp.writeWord(1234);
+    	//Debounce  - Aguarda 30 ms. 4915 ciclos
+    	tpm.startDelay(0x1333);
+    	if(tpm.timeoutDelay){
+    		temporizador.incrementador();
+    		tpm.cancelDelay();
+    	}
+    	
     }
-        
+   
+    //escreve o valor do tempo no display
+    disp.writeWord(temporizador.consulta());     
   }
   return 0;
 }

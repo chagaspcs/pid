@@ -1,7 +1,9 @@
 class dsf_Temporizador
 {
   private:
-  	int aux;
+  	int tempo=0;
+  	int segundo=0;
+  	int aux=0;
 
   public:
     bool decrementador();
