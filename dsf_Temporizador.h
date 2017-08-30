@@ -9,4 +9,5 @@ class dsf_Temporizador
     bool decrementador();
     void resetar();
     void incrementador();
+    int consulta();
 };

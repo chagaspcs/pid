@@ -7,7 +7,7 @@ bool dsf_OnOff::onoff(mkl_GPIOPort botao_in, mkl_GPIOPort led_in)
 
   if(botao.readBit()==0)
   {
-    bit = !readBit;
+    bit = !botao.readBit();
     led.writeBit(bit);
   return true;
   }
