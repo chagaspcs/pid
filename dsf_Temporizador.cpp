@@ -1,29 +1,25 @@
 #include "dsf_Temporizador.h"
 
-bool dsf_Temporizador::decrementador()
+int dsf_Temporizador::decrementador()
 {
   if (tempo == 0){
-    return true;
+    return -1;
   }
-  else{
-      if(segundo == 60){
-        tempo = tempo - 1;
-      }
-      else{
-        segundo = segundo + 1;
-      }
-    return false
+  else
+  {
+    tempo = tempo - 1;
+    return tempo;
   }
 }
 
 void dsf_Temporizador::resetar()
 {
-  tempo == 0;
+  tempo = 0;
 }
 
 void dsf_Temporizador::incrementador()
 {
-  if (tempo > 90){
+  if (tempo >= 90){
     tempo = 0;
   }
   else{
@@ -34,7 +30,7 @@ void dsf_Temporizador::incrementador()
   }
 }
 
-void dsf_Temporizador::consulta()
+int dsf_Temporizador::consulta()
 {
   return  tempo;
 }

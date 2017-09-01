@@ -1,10 +1,9 @@
+#include <stdint.h>
 
-class dsf_DivFreq
+class dsf_Mux
 {
-  private:
-  	int aux=100;
 
   public:
-    bool contador(); 
+    uint8_t mux(uint8_t select, uint8_t tempo, uint8_t temperatura);
 
 };

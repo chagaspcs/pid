@@ -1,13 +1,12 @@
 #include "dsf_Mux.h"
 
-bool dsf_Mux::contador()
+uint8_t dsf_Mux::mux(uint8_t select, uint8_t tempo, uint8_t temperatura)
 {
-  if (aux == 0){
-    aux = 100;
-    return true;
-  }
-  else{
-    aux = aux - 1;
-    return false
-  }
+	switch(select)
+	{
+	case 0:
+		return tempo;
+	case 1:
+		return temperatura;
+	}
 }

@@ -1,3 +1,5 @@
+#ifndef dsf_DivFreq_h
+#define dsf_DivFreq_h
 
 class dsf_DivFreq
 {
@@ -8,3 +10,5 @@ class dsf_DivFreq
     bool contador(); 
 
 };
+
+#endif

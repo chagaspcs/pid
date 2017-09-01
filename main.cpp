@@ -39,16 +39,17 @@
  */
 
 
-#include "mkl_TPMDelay/mkl_TPMDelay.h"
-#include "mkl_PIT/mkl_PIT.h"
-#include "mkl_PITDelay/mkl_PITDelay.h"
+#include "mkl_TPM Delay/mkl_TPMDelay.h"
+#include "mkl_PIT Delay/mkl_PIT.h"
+#include "mkl_PIT Delay/mkl_PITDelay.h"
 #include "mkl_PITPeriodicInterrupt/mkl_PITPeriodicInterrupt.h"
-#include "mkl_GPIOPort/mkl_GPIOPort.h"
-#include "SerialDisplays/dsf_SerialDisplays.h"
+#include "mkl_GPIO Port/mkl_GPIOPort.h"
+#include "dsf_SerialDisplays.h"
 #include "dsf_DivFreq.h"
 #include <stdint.h>
 #include "dsf_OnOff.h"
 #include "dsf_Temporizador.h"
+#include "dsf_Mux.h"
 
 
 
@@ -59,8 +60,9 @@ mkl_GPIOPort greenLed(gpio_PTB19);
 
 mkl_GPIOPort onoffKey(gpio_PTB8);
 mkl_GPIOPort sleepKey(gpio_PTB9);
-mkl_GPIOPort decKey(gpio_PTB11);
 mkl_GPIOPort resetKey(gpio_PTB10);
+mkl_GPIOPort decKey(gpio_PTB11);
+
 
 
 mkl_PITInterruptInterrupt pit(PIT_Ch0);
@@ -72,26 +74,20 @@ dsf_SerialDisplays disp(gpio_PTC7, gpio_PTC0, gpio_PTC3);
 dsf_DivFreq divisor;
 dsf_Temporizador temporizador;
 dsf_OnOff standby;
+dsf_Mux seletor;
 
-
-/*!
- *  Configuração do PIT para gerar interrupções periódicas.
- */
+int bit=0;
 
   int setupPIT()
   {
 	pit.enablePeripheralModule();
-	pit.setPeriod(0x4e20);
+	pit.setPeriod(35000);
    	
    	pit.resetCounter();
     pit.enableTimer();
     pit.enableInterruptRequests();
 }
 
-/*!
- *  Rotina de Serviço de Interrupção (ISR) do PIT.
- *  Atualiza as informações dos displays
- */
 
 void setupGPIO()
 {
@@ -114,14 +110,12 @@ void setupGPIO()
 
   resetKey.setPortMode(gpio_input);
   resetKey.setPullResistor(gpio_pullUpResistor);
+
+  greenLed.writeBit(0);
+  blueLed.writeBit(1);
 }
 
 void setupTPM()
-{
-  tpm.setFrequency(tpm_div128);
-}
-
-void setup()
 {
   tpm.setFrequency(tpm_div128);
 }
@@ -130,11 +124,20 @@ extern "C"
 {
   void PIT_IRQHandler(void)
   {
-    disp.updateDisplays();
+
     if(divisor.contador())
     {
-    	temporizador.decrementador();
+    	if(temporizador.decrementador()==0)
+    	{
+    		disp.clearDisplays();
+    		disp.hideZerosLeft();
+    		disp.updateDisplays();
+    		greenLed.writeBit(0);
+    		bit=0;
+    	}
     }
+
+    pit.clearInterruptFlag();
   }
 }
 
@@ -142,7 +145,7 @@ extern "C"
 int main() {
  
   //variaveis
-  //int bit=0;
+ //  int bit=0;
 
   //setup do GPIO
   setupGPIO();
@@ -152,50 +155,55 @@ int main() {
   
   //setup do TPM
   setupTPM();
+  tpm.startDelay(20);
 
-disp.clearDisplays();
+  disp.clearDisplays();
+ // disp.hideZerosLeft();
 
   while (true)
   {
-    
-    if (!onoffKey.readBit())
-    {
-		//Debounce  - Aguarda 30 ms. 4915 ciclos
-		tpm.startDelay(0x1333);
-    	if(tpm.timeoutDelay() == 0)
-    	{
-    		standby.onoff(onoffKey, greenLed);
-    		tpm.cancelDelay();
-    	}
-    }
-   
-    if (!resetKey.readBit())
-    {
-    	//Debounce  - Aguarda 30 ms. 4915 ciclos
-    	tpm.startDelay(0x1333);
-    	if(tpm.timeoutDelay() == 0)
-    	{
-    		temporizador.resetar();
-    		tpm.cancelDelay();
-    	}
+	  disp.updateDisplays();
 
-    }
-    
-    if (!sleepKey.readBit())
-    {
-    	//Debounce  - Aguarda 30 ms. 4915 ciclos
-    	tpm.startDelay(0x1333);
+	  if (!onoffKey.readBit()&&tpm.timeoutDelay())
+	  {
+		  //tpm.waitDelay(0x6000);	//Debounce
+		  bit = standby.onoff();
+		  greenLed.writeBit(bit);
+		  disp.clearDisplays();
+		  temporizador.resetar();
+		  tpm.startDelay(25000);
+	  }
 
-    	if(tpm.timeoutDelay() == 0)
-    	{
-    		temporizador.incrementador();
-    		tpm.cancelDelay();
-    	}
+	  if(bit)
+	  {
+		  disp.updateDisplays();
+		  disp.writeWord(temporizador.consulta());
 
-    }
+		  if (!resetKey.readBit()&&tpm.timeoutDelay())
+		  {
+			  temporizador.resetar();
+			  tpm.startDelay(25000);
+		  }
 
-    //escreve o valor do tempo no display
-    disp.writeWord(temporizador.consulta());
+		  if (!sleepKey.readBit()&&tpm.timeoutDelay())
+		  {
+			  temporizador.incrementador();
+			  tpm.startDelay(25000);
+		  }
+
+	  }
+
+	  if (temporizador.consulta() )
+	  {
+		  blueLed.writeBit(0);
+	  }
+	  else
+	  {
+		  blueLed.writeBit(1);
+	  }
+
+	  disp.hideZerosLeft();
   }
   return 0;
 }
+

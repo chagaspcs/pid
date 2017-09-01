@@ -1,16 +1,7 @@
 #include "dsf_OnOff.h"
 
-bool dsf_OnOff::onoff(mkl_GPIOPort botao_in, mkl_GPIOPort led_in)
+int dsf_OnOff::onoff()
 {
-  botao = botao_in;
-  led = led_in;
-
-  if(botao.readBit()==0)
-  {
-    bit = !botao.readBit();
-    led.writeBit(bit);
-  return true;
-  }
-  else
-    return false;
+	 sinal = !sinal;
+	 return (sinal);
 }
